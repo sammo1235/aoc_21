@@ -12,7 +12,7 @@ module Navigate
   end
 
   def self.data
-    @data ||= File.open("./spec/#{__FILE__.match(/day_[1-25]/)}.txt", "r").readlines.map(&:chomp)
+    @data ||= File.open("./spec/#{__FILE__.match(/day_\d+/)}.txt", "r").readlines.map(&:chomp)
   end
 end
 
