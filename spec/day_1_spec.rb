@@ -4,7 +4,7 @@ module Depth
   end
 
   def self.part_two
-    (1..data.length-1).inject(0) {|acc, idx| acc += 1 if data[idx-1..idx+1].sum < data[idx..idx+2].sum; acc}
+    (1..data.length-2).inject(0) {|acc, idx| acc += 1 if data[idx-1..idx+1].sum < data[idx..idx+2].sum; acc}
   end
 
   def self.data
