@@ -1,25 +1,8 @@
 require 'byebug'
-module A
-  BAR_A = 'Bar A!'
-  module B
-    BAR_B = 'Bar B!'
-      class Foo
-        p BAR_A
-        p BAR_B
-      end
-  end
-end
-
-class A::B::Baz
-  # p BAR_A these will not work
-  # p BAR_B
-end
 
 module Boards
   def prepare_boards
-    new_boards = {}
-    boards.each { |k, v| new_boards[k]={data: v, won: false}}
-    new_boards
+    boards.each_with_object({}) { |(k, v), new_boards| new_boards[k]={data: v, won: false}}
   end
 
   module Grabber
@@ -29,22 +12,20 @@ module Boards
 
     class Boing
       attr_reader :data, :boards
-      attr_accessor :no
       # despite being namespaced within both these modules, we need to include them
       include Grabber
       include Boards
       
       def initialize(data)
         @data = data
-        @boards = default_boards
-        @no = 0
-        @boards = grab_boards
+        @boards = grab_boards(default_boards)
       end
 
-      def grab_boards
+      def grab_boards(boards)
+        no = 0
         data[1..].map {|l| l.split.map {|n| [n, false]}}.each do |l|
           if l == []
-            self.no += 1
+            no += 1
             next
           else
             boards[no] << l
@@ -54,12 +35,6 @@ module Boards
       end
     end
   end
-  
-  # class << self
-  #   Grabber.singleton_methods.each do |m|
-  #     define_method m, Grabber.method(m).to_proc
-  #   end
-  # end
 
   def self.winning_line_or_column(line, lines, idx)
     line.map {|num| num[1] }.uniq.all? || lines[:data].transpose[idx].map {|num| num[1] }.uniq.all?
@@ -91,10 +66,6 @@ end
 class CalledBingoNumbers < CalledNumbers
   include Access
 
-  def initialize(data)
-    super
-  end
-
   def get_numbers
     access_numbers
   end
@@ -113,23 +84,48 @@ module Totalizer
 end
 
 module Bingo
+  SOLVER_PROCS = {
+    default: Proc.new { |line, lines, idx| winning_line_or_column(line, lines, idx) }
+  }
+
+  include_module_methods Boards
+
+  def self.data
+    @data ||= File.open("./spec/#{__FILE__.match(/day_\d+/)}.txt", "r").readlines.map(&:chomp)
+  end
+
   module Solver
-    # here we are converting singleton methods in a module to instance methods in a class
-    [Boards, Totalizer].each do |mod|
+    # here we are converting singleton methods in a module to instance methods in a method (to be included in a class)
+    [Bingo, Totalizer].each do |mod|
       mod.singleton_methods.each do |m|
         self.define_method(m, mod.method(m).to_proc)
       end
     end
 
-    class PartOne
+    class Part
       include Solver
-      
-      attr_reader :called, :boards
-      def initialize(called, boards)
-        @called = called
-        @boards = boards
+
+      attr_reader :called, :boards, :block
+      def initialize(&block)
+        @called = default_called
+        @boards = default_boards
+        @block = default_solver
       end
 
+      def default_called
+        CalledBingoNumbers.new(data).get_numbers
+      end
+
+      def default_boards
+        Boards::Grabber::Boing.new(data).prepare_boards
+      end
+
+      def default_solver
+        SOLVER_PROCS[:default]
+      end
+    end
+
+    class PartOne < Part      
       def solve
         bingo = false
         total = 0
@@ -141,7 +137,7 @@ module Bingo
                 if num[0] == call
                   num[1] = true
                 end
-                if winning_line_or_column(line, lines, idx)
+                if block.call(line, lines, idx)
                   winning_no = call.to_i
                   total = get_total(lines[:data])
                   bingo = true
@@ -158,15 +154,7 @@ module Bingo
       end
     end
 
-    class PartTwo
-      include Solver
-
-      attr_reader :called, :boards
-      def initialize(called, boards)
-        @called = called
-        @boards = boards
-      end
-
+    class PartTwo < Part
       def solve
         board_count = boards.keys.length
         total = 0
@@ -179,7 +167,7 @@ module Bingo
                 if num[0] == call
                   num[1] = true
                 end
-                if winning_line_or_column(line, lines, idx)
+                if block.call(line, lines, idx)
                   lines[:won] = true
                   if boards.map {|b, lines| lines[:won]}.uniq.all?
                     winning_no = call.to_i
@@ -196,15 +184,11 @@ module Bingo
   end
   
   def self.part_one
-    Solver::PartOne.new(CalledBingoNumbers.new(data).get_numbers, Boards::Grabber::Boing.new(data).prepare_boards).solve
+    Solver::PartOne.new.solve
   end
 
   def self.part_two
-    Solver::PartTwo.new(CalledBingoNumbers.new(data).get_numbers, Boards::Grabber::Boing.new(data).prepare_boards).solve
-  end
-
-  def self.data
-    @data ||= File.open("./spec/#{__FILE__.match(/day_\d+/)}.txt", "r").readlines.map(&:chomp)
+    Solver::PartTwo.new.solve
   end
 end
 
