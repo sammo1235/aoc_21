@@ -71,7 +71,9 @@ class CalledBingoNumbers < CalledNumbers
   end
 end
 
-module Totalizer
+module Totalizer; end
+
+Totalizer.class_eval do # module_eval and class_eval are aliases for each other
   def self.get_total(lines)
     lines.reduce(0) do |acc, line|
       acc += line.reduce(0) do |ac, num|
@@ -83,10 +85,25 @@ module Totalizer
   end
 end
 
+default_called = <<-RUBY
+  def default_called
+    CalledBingoNumbers.new(data).get_numbers
+  end
+RUBY
+
+class Part; end # Original definition of Part, notice it's outside of the modules
+
+Part.class_eval(default_called) # add one method
+
 module Bingo
   SOLVER_PROCS = {
-    default: Proc.new { |line, lines, idx| winning_line_or_column(line, lines, idx) }
-  }
+    default: Proc.new { |line, lines, idx| winning_line_or_column(*[line, lines, idx]) } # we can spread the array into 3 args with *[]
+  } # you can't put return in here ^ because it will return out of the calling method (LocalJumpError)
+
+  SOLVER_LAMBDAS = {
+    default: -> line, lines, idx { winning_line_or_column(line, lines, idx) },
+    other_style: lambda { |line, lines, idx| return winning_line_or_column(line, lines, idx) }
+  } # lamdas treat return as a local return, so you can do this ^
 
   include_module_methods Boards
 
@@ -102,18 +119,15 @@ module Bingo
       end
     end
 
-    class Part
+
+    Part.class_eval do # add the rest of the methods
       include Solver
 
       attr_reader :called, :boards, :block
-      def initialize(&block)
+      def initialize(block = SOLVER_PROCS[:default]) # default block so we can switch them out
         @called = default_called
         @boards = default_boards
-        @block = default_solver
-      end
-
-      def default_called
-        CalledBingoNumbers.new(data).get_numbers
+        @block = block
       end
 
       def default_boards
@@ -188,7 +202,7 @@ module Bingo
   end
 
   def self.part_two
-    Solver::PartTwo.new.solve
+    Solver::PartTwo.new(SOLVER_LAMBDAS[:default]).solve
   end
 end
 
