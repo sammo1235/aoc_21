@@ -1,0 +1,88 @@
+require 'byebug'
+class SmokeBasin
+  def self.part_one
+    lowpoints = []
+    data.each_with_index do |l, yidx|
+      (0..l.length-1).each do |xidx|
+        left = l[xidx-1] if xidx > 0
+        right = l[xidx+1] if xidx < l.length-1
+        down = data[yidx+1][xidx] if yidx < data.length-1
+        up = data[yidx-1][xidx] if yidx > 0
+        lowpoints << (l[xidx] + 1) if [*(left), *(right), *(down), *(up)].all? {|n| n > l[xidx]}
+      end
+    end
+    lowpoints.sum
+  end
+
+  @coords = []
+  class << self
+    attr_accessor :coords
+  end
+
+  def self.part_two
+    basins = {}
+    basin = 1
+    data.each_with_index do |l, yidx|
+      (0..l.length-1).each do |xidx|
+        left = l[xidx-1] if xidx > 0
+        right = l[xidx+1] if xidx < l.length-1
+        down = data[yidx+1][xidx] if yidx < data.length-1
+        up = data[yidx-1][xidx] if yidx > 0
+        if [*(left), *(right), *(down), *(up)].all? {|n| n > l[xidx]}
+          basins[basin] = DiscernBasinCoords.new(data, yidx, xidx).get_total_all_coords
+          basin += 1
+        end
+      end
+    end
+    basins.values.sort.reverse[0..2].inject(:*)
+  end
+
+  class DiscernBasinCoords
+    attr_reader :data, :coords
+    def initialize(data, starting_yidx, starting_xidx)
+      @data = data
+      @coords = []
+      find_neighbors(starting_yidx, starting_xidx)
+    end
+
+    def get_total_all_coords
+      coords.count
+    end
+
+    def find_neighbors(yidx, xidx, dir = nil) # dir = don't check behind you
+      return if data[yidx][xidx] == 9 || coords.include?([yidx, xidx])
+      coords << [yidx, xidx]
+      if yidx > 0 && dir != "d" # up
+        if data[yidx-1][xidx] < 9
+          find_neighbors(yidx-1, xidx, "u")
+        end
+      end
+      if yidx < data.length-1 && dir != "u"# down
+        if data[yidx+1][xidx] < 9
+          find_neighbors(yidx+1, xidx, "d")
+        end
+      end
+      if xidx > 0 && dir != "r" # left
+        if data[yidx][xidx-1] < 9
+          find_neighbors(yidx, xidx-1, "l")
+        end
+      end
+      if xidx < data[0].length-1 && dir != "l" # right
+        if data[yidx][xidx+1] < 9
+          find_neighbors(yidx, xidx+1, "r")
+        end
+      end
+    end
+  end
+
+  def self.data
+    @data ||= File.open("./spec/#{__FILE__.match(/day_\d+/)}.txt", "r+").readlines.map(&:chomp).map {|l| l.chars.map(&:to_i) }
+  end
+end
+
+RSpec.describe SmokeBasin do
+  it "solves" do
+    expect(SmokeBasin.part_one).to eq 491
+    expect(SmokeBasin.part_two).to eq 1075536
+  end
+end
