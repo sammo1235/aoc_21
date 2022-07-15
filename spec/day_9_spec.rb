@@ -49,29 +49,13 @@ class SmokeBasin
       coords.count
     end
 
-    def find_neighbors(yidx, xidx, dir = nil) # dir = don't check behind you
+    def find_neighbors(yidx, xidx) # dir = don't check behind you
       return if data[yidx][xidx] == 9 || coords.include?([yidx, xidx])
       coords << [yidx, xidx]
-      if yidx > 0 && dir != "d" # up
-        if data[yidx-1][xidx] < 9
-          find_neighbors(yidx-1, xidx, "u")
-        end
-      end
-      if yidx < data.length-1 && dir != "u"# down
-        if data[yidx+1][xidx] < 9
-          find_neighbors(yidx+1, xidx, "d")
-        end
-      end
-      if xidx > 0 && dir != "r" # left
-        if data[yidx][xidx-1] < 9
-          find_neighbors(yidx, xidx-1, "l")
-        end
-      end
-      if xidx < data[0].length-1 && dir != "l" # right
-        if data[yidx][xidx+1] < 9
-          find_neighbors(yidx, xidx+1, "r")
-        end
-      end
+      find_neighbors(yidx-1, xidx) if yidx > 0 && data[yidx-1][xidx] < 9
+      find_neighbors(yidx+1, xidx) if yidx < data.length-1 && data[yidx+1][xidx] < 9
+      find_neighbors(yidx, xidx-1) if xidx > 0 && data[yidx][xidx-1] < 9
+      find_neighbors(yidx, xidx+1) if xidx < data[0].length-1 && data[yidx][xidx+1] < 9
     end
   end
 
