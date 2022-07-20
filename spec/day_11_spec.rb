@@ -56,7 +56,7 @@ class DumboOctopus
   end
 
   def self.data
-    @data ||= File.open("./spec/day_11.txt", "r+").readlines.map(&:chomp).map {|l| l.chars.map(&:to_i) }
+    @data ||= File.open("./spec/#{__FILE__.match(/day_\d+/)}.txt", "r+").readlines.map(&:chomp).map {|l| l.chars.map(&:to_i) }
   end
 end
 
