@@ -56,7 +56,7 @@ class PassagePathing
     GraphTraversal.new(data, true).answer
   end
 
-  def self.data()
+  def self.data
     @data ||= File.open("./spec/#{__FILE__.match(/day_\d+/)}.txt", "r+").readlines.map(&:chomp)
   end
 end
